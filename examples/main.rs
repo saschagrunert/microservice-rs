@@ -50,17 +50,24 @@ fn run() -> Result<()> {
         Ok(_) => info!("Log level set to: {}", log_level),
     }
 
+    // Check the CLI parameters
     let address = matches.value_of("address").ok_or_else(
         || "No CLI 'address' provided",
     )?;
+    let server_cert_file = matches.value_of("servercertfile").ok_or_else(
+        || "No server certificate provided",
+    )?;
+    let client_cert_file = matches.value_of("clientcertfile").ok_or_else(
+        || "No client certificate provided",
+    )?;
 
     // Create the microservice instance
-    let microservice = Microservice::new(address)?;
+    let microservice = Microservice::new(address, server_cert_file)?;
 
     // Check if testing is enabled
     if matches.is_present("test") {
         // Get a client to the microservice
-        let (client, mut rpc) = microservice.get_client()?;
+        let (client, mut rpc) = microservice.get_client(client_cert_file)?;
 
         // Assemble the request
         let mut request = client.hello_request();

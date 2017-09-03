@@ -1,3 +1,4 @@
+---
 name: microservice-rs
 bin_name: microservice
 author: Sascha Grunert <mail@saschagrunert.de>
@@ -12,13 +13,23 @@ args:
       short: v
       help: Set the verbosity level (maximum 2x `v`)
       multiple: true
-  - address:
-      short: a
-      long: address
-      help: The address for the client/server.
-      default_value: 127.0.0.1:30080
-      takes_value: true
   - test:
       short: t
       long: test
       help: Create a test client and talk to a server instance.
+  - address:
+      short: a
+      long: address
+      help: The address for the client/server.
+      takes_value: true
+      default_value: 127.0.0.1:30080
+  - servercertfile:
+      long: server-cert-file
+      help: The location of the TLS certificate file for the server
+      takes_value: true
+      default_value: tests/certificate.pfx
+  - clientcertfile:
+      long: client-cert-file
+      help: The location of the TLS certificate file for the client
+      takes_value: true
+      default_value: tests/certificate.der

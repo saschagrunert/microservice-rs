@@ -8,10 +8,15 @@ use std::{thread, time};
 #[test]
 fn hello_success() {
     let addr = "127.0.0.1:30080";
+    let server_cert = "tests/certificate.pfx";
+    let client_cert = "tests/certificate.der";
 
     // Run the server in a differenc instance
     thread::spawn(move || {
-        Microservice::new(addr).unwrap().serve().unwrap();
+        Microservice::new(addr, server_cert)
+            .unwrap()
+            .serve()
+            .unwrap();
     });
 
     // Wait for the server to become ready
@@ -19,7 +24,10 @@ fn hello_success() {
     thread::sleep(time);
 
     // Get a client to the microservice
-    let (client, mut rpc) = Microservice::new(addr).unwrap().get_client().unwrap();
+    let (client, mut rpc) = Microservice::new(addr, server_cert)
+        .unwrap()
+        .get_client(client_cert)
+        .unwrap();
 
     // Assemble the request
     let mut request = client.hello_request();
