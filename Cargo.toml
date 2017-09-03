@@ -23,7 +23,7 @@ capnpc = "0.8"
 capnp = "0.8"
 capnp-rpc = "0.8"
 clap = { version = "2", features = ["yaml"] }
-clippy = {version = "*", optional = true}
+clippy = {version = "0", optional = true}
 error-chain = "0"
 futures = "0.1"
 log = "0.3"
