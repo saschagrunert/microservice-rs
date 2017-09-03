@@ -9,8 +9,10 @@
 extern crate capnp_rpc;
 extern crate capnp;
 extern crate futures;
+extern crate native_tls;
 extern crate tokio_core;
 extern crate tokio_io;
+extern crate tokio_tls;
 
 #[macro_use]
 extern crate error_chain;
@@ -30,8 +32,10 @@ use std::net::ToSocketAddrs;
 use capnp::capability::Promise;
 use capnp_rpc::{RpcSystem, twoparty, rpc_twoparty_capnp, Server};
 use futures::{Future, Stream};
+use native_tls::{Pkcs12, TlsAcceptor};
 use tokio_core::{net, reactor};
 use tokio_io::AsyncRead;
+use tokio_tls::TlsAcceptorExt;
 
 use errors::*;
 use microservice_capnp::microservice;

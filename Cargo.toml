@@ -20,16 +20,18 @@ appveyor = { repository = "saschagrunert/microservice-rs", branch = "master", se
 capnpc = "0.8"
 
 [dependencies]
-clap = { version = "2", features = ["yaml"] }
-clippy = {version = "*", optional = true}
 capnp = "0.8"
 capnp-rpc = "0.8"
+clap = { version = "2", features = ["yaml"] }
+clippy = {version = "*", optional = true}
 error-chain = "0"
 futures = "0.1"
 log = "0.3"
 mowl = "1"
+native-tls = "0.1"
 tokio-core = "0.1"
 tokio-io = "0.1"
+tokio-tls = "0.1"
 
 [features]
 default = []
