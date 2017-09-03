@@ -2,6 +2,7 @@
 //!
 //! This crate contains the library for the basic microservice template using Cap'n Proto and Rust.
 //!
+#![cfg_attr(feature="clippy", feature(plugin))]
 #![deny(missing_docs)]
 
 #[macro_use]
@@ -35,6 +36,7 @@ use tokio_io::AsyncRead;
 use errors::*;
 use microservice_capnp::microservice;
 
+#[derive(Debug)]
 /// The main microservice structure
 pub struct Microservice {
     socket_addr: std::net::SocketAddr,

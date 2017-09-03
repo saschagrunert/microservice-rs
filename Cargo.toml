@@ -21,6 +21,7 @@ capnpc = "0.8"
 
 [dependencies]
 clap = { version = "2", features = ["yaml"] }
+clippy = {version = "*", optional = true}
 capnp = "0.8"
 capnp-rpc = "0.8"
 error-chain = "0"
@@ -29,3 +30,6 @@ log = "0.3"
 mowl = "1"
 tokio-core = "0.1"
 tokio-io = "0.1"
+
+[features]
+default = []

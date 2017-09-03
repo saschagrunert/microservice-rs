@@ -1,3 +1,6 @@
+//! The main command line interface to the microservice
+#![cfg_attr(feature="clippy", feature(plugin))]
+
 #[macro_use]
 extern crate clap;
 
