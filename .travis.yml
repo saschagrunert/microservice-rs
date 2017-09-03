@@ -9,11 +9,13 @@ matrix:
   allow_failures:
     - rust: nightly
 
-before_install:
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]];then export OPENSSL_INCLUDE_DIR=`brew --prefix openssl`/include; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]];then export OPENSSL_LIB_DIR=`brew --prefix openssl`/lib; fi
-
 before_script:
+  - curl -O https://capnproto.org/capnproto-c++-0.5.3.tar.gz
+  - tar zxf capnproto-c++-0.5.3.tar.gz
+  - cd capnproto-c++-0.5.3
+  - ./configure --prefix=$HOME
+  - make -j3
+  - make install
   - pip install 'travis-cargo<0.2' --user --verbose
   - export PATH=$HOME/.local/bin:$PATH
   - export PATH=$HOME/Library/Python/2.7/bin:$PATH
@@ -26,9 +28,9 @@ script:
   - cargo doc --no-deps
 
 after_success:
-  - if [[ "$TRAVIS_RUST_VERSION" == "stable" ]] && [[ "$TRAVIS_OS_NAME" == "linux" ]]; then travis-cargo doc-upload; fi
-  - if [[ "$TRAVIS_RUST_VERSION" == "nightly" ]] && [[ "$TRAVIS_OS_NAME" == "linux" ]]; then cargo kcov --print-install-kcov-sh | sh; fi
-  - if [[ "$TRAVIS_RUST_VERSION" == "nightly" ]] && [[ "$TRAVIS_OS_NAME" == "linux" ]]; then cargo kcov --coveralls --kcov ./kcov-33/build/src/kcov; fi
+  - if [[ "$TRAVIS_RUST_VERSION" == "stable" ]]; then travis-cargo doc-upload; fi
+  - if [[ "$TRAVIS_RUST_VERSION" == "nightly" ]]; then cargo kcov --print-install-kcov-sh | sh; fi
+  - if [[ "$TRAVIS_RUST_VERSION" == "nightly" ]]; then cargo kcov --coveralls --kcov ./kcov-33/build/src/kcov; fi
 
 notifications:
   email:
@@ -36,7 +38,6 @@ notifications:
 
 os:
   - linux
-  - osx
 
 addons:
   apt:
