@@ -1,0 +1,24 @@
+name: microservice-rs
+bin_name: microservice
+author: Sascha Grunert <mail@saschagrunert.de>
+about: A microservice template using Cap'n Proto
+after_help: 'More info at: https://github.com/saschagrunert/microservice-rs'
+global_settings:
+  - VersionlessSubcommands
+  - ColoredHelp
+
+args:
+  - verbose:
+      short: v
+      help: Set the verbosity level (maximum 2x `v`)
+      multiple: true
+  - address:
+      short: a
+      long: address
+      help: The address for the client/server.
+      default_value: 127.0.0.1:30080
+      takes_value: true
+  - test:
+      short: t
+      long: test
+      help: Create a test client and talk to a server instance.

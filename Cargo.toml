@@ -1,0 +1,31 @@
+[package]
+name = "microservice"
+version = "0.1.0"
+authors = ["Sascha Grunert <mail@saschagrunert.de>"]
+build = "src/build.rs"
+license = "MIT"
+readme = "README.md"
+keywords = ["microservice", "tokio", "capnp", "capnproto", "rpc"]
+repository = "https://github.com/saschagrunert/microservice-rs"
+homepage = "https://github.com/saschagrunert/microservice-rs"
+documentation = "https://docs.rs/microservice-rs"
+description = "A microservice template using Cap'n Proto"
+categories = ["network-programming"]
+
+[badges]
+travis-ci = { repository = "saschagrunert/microservice-rs", branch = "master" }
+appveyor = { repository = "saschagrunert/microservice-rs", branch = "master", service = "github" }
+
+[build-dependencies]
+capnpc = "0.8"
+
+[dependencies]
+clap = { version = "2", features = ["yaml"] }
+capnp = "0.8"
+capnp-rpc = "0.8"
+error-chain = "0"
+futures = "0.1"
+log = "0.3"
+mowl = "1"
+tokio-core = "0.1"
+tokio-io = "0.1"
