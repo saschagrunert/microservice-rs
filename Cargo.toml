@@ -2,7 +2,6 @@
 name = "microservice"
 version = "0.1.0"
 authors = ["Sascha Grunert <mail@saschagrunert.de>"]
-build = "src/build.rs"
 license = "MIT"
 readme = "README.md"
 keywords = ["microservice", "tokio", "capnp", "capnproto", "rpc"]

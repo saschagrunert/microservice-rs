@@ -75,10 +75,7 @@ fn run() -> Result<()> {
 
         // Run the RPC
         info!("Running the RPC.");
-        rpc.run(request
-                     .send()
-                     .promise
-                     .and_then(|message| {
+        rpc.run(request.send().promise.and_then(|message| {
                 // Get the response content
                 let response = message.get()?.get_response()?;
                 info!("Got response: {}", response);
