@@ -28,9 +28,9 @@ args:
       help: The server alt names for the TLS certificate generation
       multiple: true
       takes_value: true
-      default_value: example.com
+      default_value: 127.0.0.1
   - clientcertfile:
       long: client-cert-file
       help: The location of the TLS certificate file for the client
       takes_value: true
-      default_value: tests/certificate.der
+      default_value: cert.pem

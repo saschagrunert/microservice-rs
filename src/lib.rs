@@ -29,9 +29,10 @@ pub mod microservice_capnp {
 }
 mod rpc;
 
+use std::env::current_dir;
 use std::net::ToSocketAddrs;
 use std::fs::File;
-use std::io::{self, Read};
+use std::io::{self, Read, Write};
 
 use capnp_rpc::{RpcSystem, twoparty, rpc_twoparty_capnp, Server};
 use futures::{Future, Stream};
@@ -41,8 +42,8 @@ use openssl::bn::{BigNum, MSB_MAYBE_ZERO};
 use openssl::hash::MessageDigest;
 use openssl::pkey::PKey;
 use openssl::rsa::Rsa;
-use openssl::x509::extension::SubjectAlternativeName;
-use openssl::x509::{X509Builder, X509NameBuilder};
+use openssl::x509::extension::{KeyUsage, SubjectAlternativeName};
+use openssl::x509::{X509, X509Builder, X509NameBuilder};
 use tokio_core::{net, reactor};
 use tokio_io::AsyncRead;
 use tokio_tls::{TlsAcceptorExt, TlsConnectorExt};
@@ -51,6 +52,7 @@ use errors::*;
 use microservice_capnp::microservice;
 
 const PKCS12_PASSWORD: &str = "";
+const CERT_FILENAME: &str = "cert.pem";
 
 /// The main microservice structure
 pub struct Microservice {
@@ -125,7 +127,9 @@ impl Microservice {
         info!("Opening TLS client certificate.");
         let mut bytes = vec![];
         File::open(client_cert_file)?.read_to_end(&mut bytes)?;
-        let ca_cert = Certificate::from_der(&bytes)?;
+
+        let der_cert = X509::from_pem(&bytes)?.to_der()?;
+        let cert = Certificate::from_der(&der_cert)?;
 
         info!("Creating client.");
         let mut core = reactor::Core::new()?;
@@ -133,7 +137,7 @@ impl Microservice {
 
         let socket = net::TcpStream::connect(&self.socket_addr, &handle);
         let mut builder = TlsConnector::builder()?;
-        builder.add_root_certificate(ca_cert)?;
+        builder.add_root_certificate(cert)?;
         let cx = builder.build()?;
         let tls_handshake = socket.and_then(|socket| {
             if let Err(e) = socket.set_nodelay(true) {
@@ -163,7 +167,7 @@ impl Microservice {
 
     fn generate_cert(domains: &[&str]) -> Result<Pkcs12> {
         // Create private key
-        let private_key = PKey::from_rsa(Rsa::generate(2048)?)?;
+        let private_key = PKey::from_rsa(Rsa::generate(4096)?)?;
 
         // Create cert builder
         let mut cert_builder = X509Builder::new()?;
@@ -191,29 +195,45 @@ impl Microservice {
         cert_builder.set_not_before(&now)?;
         cert_builder.set_not_after(&then)?;
 
+        // Set key usage extension
+        let mut key_usage = KeyUsage::new();
+        key_usage.non_repudiation();
+        key_usage.digital_signature();
+        key_usage.key_encipherment();
+        let key_ext = key_usage.build()?;
+        cert_builder.append_extension(key_ext)?;
+
         // Set subject alt names if needed
-        if domains.len() > 1 {
-            let mut san = SubjectAlternativeName::new();
-            for domain in domains.iter().skip(1) {
-                info!("Setting server subject alt name: {}", domain);
-                san.dns(domain);
-            }
-            let san_ext = san.build(&cert_builder.x509v3_context(None, None))?;
-            cert_builder.append_extension(san_ext)?;
+        let mut san = SubjectAlternativeName::new();
+        for domain in domains {
+            info!("Setting server subject alt name: {}", domain);
+            san.dns(domain);
         }
+        let san_ext = san.build(&cert_builder.x509v3_context(None, None))?;
+        cert_builder.append_extension(san_ext)?;
 
         // Sign the ceritifacte
         cert_builder.sign(&private_key, MessageDigest::sha256())?;
 
         // Create the Pkcs12 bundle
+        let cert = cert_builder.build();
         let openssl_pkcs12 = openssl::pkcs12::Pkcs12::builder().build(
             PKCS12_PASSWORD,
             "server",
             &private_key,
-            &cert_builder.build(),
+            &cert,
         )?;
         let der_bytes = openssl_pkcs12.to_der()?;
         let native_tls_pkcs12 = Pkcs12::from_der(&der_bytes, PKCS12_PASSWORD)?;
+
+        // Save the cert and key
+        let cert_pem = cert.to_pem()?;
+        let key_pem = private_key.public_key_to_pem()?;
+        let filename = current_dir()?.join(CERT_FILENAME);
+        let mut file = File::create(&filename)?;
+        file.write_all(&cert_pem)?;
+        file.write_all(&key_pem)?;
+        info!("Wrote certificate to: {}", filename.display());
 
         Ok(native_tls_pkcs12)
     }
