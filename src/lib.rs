@@ -165,7 +165,7 @@ impl Microservice {
         Ok((client, core))
     }
 
-    fn generate_cert(domains: &[&str]) -> Result<Pkcs12> {
+    fn get_cert_builder_and_private_key() -> Result<(X509Builder, PKey)> {
         // Create private key
         let private_key = PKey::from_rsa(Rsa::generate(4096)?)?;
 
@@ -180,6 +180,19 @@ impl Microservice {
         let asn1_serial = serial.to_asn1_integer()?;
         cert_builder.set_serial_number(&asn1_serial)?;
 
+        // Set certificate validity
+        let now = Asn1Time::days_from_now(0)?;
+        let then = Asn1Time::days_from_now(365 * 10)?;
+        cert_builder.set_not_before(&now)?;
+        cert_builder.set_not_after(&then)?;
+
+        Ok((cert_builder, private_key))
+    }
+
+    fn generate_cert(domains: &[&str]) -> Result<Pkcs12> {
+        // Get the default cert builder and private key
+        let (mut cert_builder, private_key) = Self::get_cert_builder_and_private_key()?;
+
         // Set certificate subject
         let mut subject_builder = X509NameBuilder::new()?;
         let first_domain = domains.iter().nth(0).unwrap_or(&"");
@@ -188,12 +201,6 @@ impl Microservice {
         let subject = subject_builder.build();
         cert_builder.set_subject_name(&subject)?;
         cert_builder.set_issuer_name(&subject)?;
-
-        // Set certificate validity
-        let now = Asn1Time::days_from_now(0)?;
-        let then = Asn1Time::days_from_now(365 * 10)?;
-        cert_builder.set_not_before(&now)?;
-        cert_builder.set_not_after(&then)?;
 
         // Set key usage extension
         let mut key_usage = KeyUsage::new();
