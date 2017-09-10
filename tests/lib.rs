@@ -13,11 +13,8 @@ fn hello_success() {
 
     // Run the server in a differenc instance
     thread::spawn(move || {
-                      Microservice::new(addr)
-                          .unwrap()
-                          .serve(server_cert)
-                          .unwrap();
-                  });
+        Microservice::new(addr).unwrap().serve(server_cert).unwrap();
+    });
 
     // Wait for the server to become ready
     let time = time::Duration::from_secs(1);
@@ -34,16 +31,12 @@ fn hello_success() {
     request.get().set_request("Hello");
 
     // Run the RPC
-    rpc.run(request
-                 .send()
-                 .promise
-                 .and_then(|message| {
-                               // Get the response content
-                               let response = message.get()?.get_response()?;
+    rpc.run(request.send().promise.and_then(|message| {
+        // Get the response content
+        let response = message.get()?.get_response()?;
 
-                               // Check the result
-                               assert_eq!(response, "olleH");
-                               Ok(())
-                           }))
-        .unwrap();
+        // Check the result
+        assert_eq!(response, "olleH");
+        Ok(())
+    })).unwrap();
 }

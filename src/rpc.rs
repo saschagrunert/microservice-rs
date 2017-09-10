@@ -6,10 +6,11 @@ use microservice_capnp::microservice;
 pub struct Rpc;
 
 impl microservice::Server for Rpc {
-    fn hello(&mut self,
-             params: microservice::HelloParams,
-             mut results: microservice::HelloResults)
-             -> Promise<(), capnp::Error> {
+    fn hello(
+        &mut self,
+        params: microservice::HelloParams,
+        mut results: microservice::HelloResults,
+    ) -> Promise<(), capnp::Error> {
         // Get the request
         let request = pry!(pry!(params.get()).get_request());
         info!("Got request: {}", request);

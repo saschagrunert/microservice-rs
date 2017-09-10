@@ -51,15 +51,15 @@ fn run() -> Result<()> {
     }
 
     // Check the CLI parameters
-    let address = matches
-        .value_of("address")
-        .ok_or_else(|| "No CLI 'address' provided")?;
-    let server_cert_file = matches
-        .value_of("servercertfile")
-        .ok_or_else(|| "No server certificate provided")?;
-    let client_cert_file = matches
-        .value_of("clientcertfile")
-        .ok_or_else(|| "No client certificate provided")?;
+    let address = matches.value_of("address").ok_or_else(
+        || "No CLI 'address' provided",
+    )?;
+    let server_cert_file = matches.value_of("servercertfile").ok_or_else(
+        || "No server certificate provided",
+    )?;
+    let client_cert_file = matches.value_of("clientcertfile").ok_or_else(
+        || "No client certificate provided",
+    )?;
 
     // Create the microservice instance
     let microservice = Microservice::new(address)?;
@@ -76,14 +76,14 @@ fn run() -> Result<()> {
         // Run the RPC
         info!("Running the RPC.");
         rpc.run(request.send().promise.and_then(|message| {
-                // Get the response content
-                let response = message.get()?.get_response()?;
-                info!("Got response: {}", response);
+            // Get the response content
+            let response = message.get()?.get_response()?;
+            info!("Got response: {}", response);
 
-                // Check the result
-                assert_eq!(response, "olleH");
-                Ok(())
-            }))?;
+            // Check the result
+            assert_eq!(response, "olleH");
+            Ok(())
+        }))?;
 
         info!("Test passed.");
     } else {

@@ -51,10 +51,9 @@ impl Microservice {
     /// Create a new microservice instance
     pub fn new(address: &str) -> Result<Self> {
         // Parse socket address
-        let parsed_address = address
-            .to_socket_addrs()?
-            .next()
-            .ok_or_else(|| "Could not parse socket address.")?;
+        let parsed_address = address.to_socket_addrs()?.next().ok_or_else(
+            || "Could not parse socket address.",
+        )?;
 
         // Process TLS settings
         info!("Parsed socket address: {:}", parsed_address);
@@ -73,8 +72,7 @@ impl Microservice {
         // Prepare the vector
         info!("Opening server certificate");
         let mut bytes = vec![];
-        File::open(cert_filename)?
-            .read_to_end(&mut bytes)?;
+        File::open(cert_filename)?.read_to_end(&mut bytes)?;
 
         // Create the certificate
         let cert = Pkcs12::from_der(&bytes, "")?;
@@ -86,11 +84,11 @@ impl Microservice {
         let connections = socket.incoming();
 
         let tls_handshake = connections.map(|(socket, _addr)| {
-                                                if let Err(e) = socket.set_nodelay(true) {
-                                                    error!("Unable to set socket to nodelay: {:}", e);
-                                                }
-                                                tls_acceptor.accept_async(socket)
-                                            });
+            if let Err(e) = socket.set_nodelay(true) {
+                error!("Unable to set socket to nodelay: {:}", e);
+            }
+            tls_acceptor.accept_async(socket)
+        });
 
         let server = tls_handshake.map(|acceptor| {
             let handle = handle.clone();
@@ -98,10 +96,12 @@ impl Microservice {
             acceptor.and_then(move |socket| {
                 let (reader, writer) = socket.split();
 
-                let network = twoparty::VatNetwork::new(reader,
-                                                        writer,
-                                                        rpc_twoparty_capnp::Side::Server,
-                                                        Default::default());
+                let network = twoparty::VatNetwork::new(
+                    reader,
+                    writer,
+                    rpc_twoparty_capnp::Side::Server,
+                    Default::default(),
+                );
 
                 let rpc_system = RpcSystem::new(Box::new(network), Some(server_impl.client));
                 handle.spawn(rpc_system.map_err(|e| error!("{}", e)));
@@ -111,9 +111,9 @@ impl Microservice {
 
         info!("Running server");
         Ok(core.run(server.for_each(|client| {
-                                        handle.spawn(client.map_err(|e| error!("{}", e)));
-                                        Ok(())
-                                    }))?)
+            handle.spawn(client.map_err(|e| error!("{}", e)));
+            Ok(())
+        }))?)
     }
 
     /// Retrieve a client to the microservice instance
@@ -132,20 +132,23 @@ impl Microservice {
         builder.add_root_certificate(ca_cert)?;
         let cx = builder.build()?;
         let tls_handshake = socket.and_then(|socket| {
-                                                if let Err(e) = socket.set_nodelay(true) {
-                                                    error!("Unable to set socket to nodelay: {:}", e);
-                                                }
-                                                cx.connect_async("localhost", socket)
-                                                    .map_err(|e| io::Error::new(io::ErrorKind::Other, e))
-                                            });
+            if let Err(e) = socket.set_nodelay(true) {
+                error!("Unable to set socket to nodelay: {:}", e);
+            }
+            cx.connect_async("localhost", socket).map_err(|e| {
+                io::Error::new(io::ErrorKind::Other, e)
+            })
+        });
 
         let stream = core.run(tls_handshake)?;
         let (reader, writer) = stream.split();
 
-        let network = Box::new(twoparty::VatNetwork::new(reader,
-                                                         writer,
-                                                         rpc_twoparty_capnp::Side::Client,
-                                                         Default::default()));
+        let network = Box::new(twoparty::VatNetwork::new(
+            reader,
+            writer,
+            rpc_twoparty_capnp::Side::Client,
+            Default::default(),
+        ));
         let mut rpc_system = RpcSystem::new(network, None);
         let client: microservice::Client = rpc_system.bootstrap(rpc_twoparty_capnp::Side::Server);
         handle.spawn(rpc_system.map_err(|e| error!("{}", e)));
