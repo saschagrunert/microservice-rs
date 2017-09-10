@@ -171,7 +171,7 @@ impl Microservice {
 
         // Create cert builder
         let mut cert_builder = X509Builder::new()?;
-        cert_builder.set_version(2)?;
+        cert_builder.set_version(3)?;
         cert_builder.set_pubkey(&private_key)?;
 
         // Generate serial number
@@ -204,13 +204,15 @@ impl Microservice {
         cert_builder.append_extension(key_ext)?;
 
         // Set subject alt names if needed
-        let mut san = SubjectAlternativeName::new();
-        for domain in domains {
-            info!("Setting server subject alt name: {}", domain);
-            san.dns(domain);
+        if domains.len() > 1 {
+            let mut san = SubjectAlternativeName::new();
+            for domain in domains.iter().skip(1) {
+                info!("Setting server subject alt name: {}", domain);
+                san.dns(domain);
+            }
+            let san_ext = san.build(&cert_builder.x509v3_context(None, None))?;
+            cert_builder.append_extension(san_ext)?;
         }
-        let san_ext = san.build(&cert_builder.x509v3_context(None, None))?;
-        cert_builder.append_extension(san_ext)?;
 
         // Sign the ceritifacte
         cert_builder.sign(&private_key, MessageDigest::sha256())?;
