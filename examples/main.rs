@@ -54,9 +54,10 @@ fn run() -> Result<()> {
     let address = matches.value_of("address").ok_or_else(
         || "No CLI 'address' provided",
     )?;
-    let server_cert_file = matches.value_of("servercertfile").ok_or_else(
-        || "No server certificate provided",
-    )?;
+    let server_domains: Vec<&str> = matches
+        .values_of("serverdomains")
+        .ok_or_else(|| "No server domains provided")?
+        .collect();
     let client_cert_file = matches.value_of("clientcertfile").ok_or_else(
         || "No client certificate provided",
     )?;
@@ -88,7 +89,7 @@ fn run() -> Result<()> {
         info!("Test passed.");
     } else {
         // Start the server
-        microservice.serve(server_cert_file)?;
+        microservice.serve(&server_domains)?;
     }
 
     Ok(())

@@ -23,11 +23,12 @@ args:
       help: The address for the client/server.
       takes_value: true
       default_value: 127.0.0.1:30080
-  - servercertfile:
-      long: server-cert-file
-      help: The location of the TLS certificate file for the server
+  - serverdomains:
+      long: server-domain
+      help: The server alt names for the TLS certificate generation
+      multiple: true
       takes_value: true
-      default_value: tests/certificate.pfx
+      default_value: example.com
   - clientcertfile:
       long: client-cert-file
       help: The location of the TLS certificate file for the client

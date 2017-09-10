@@ -10,6 +10,7 @@ extern crate capnp_rpc;
 extern crate capnp;
 extern crate futures;
 extern crate native_tls;
+extern crate openssl;
 extern crate tokio_core;
 extern crate tokio_io;
 extern crate tokio_tls;
@@ -35,12 +36,21 @@ use std::io::{self, Read};
 use capnp_rpc::{RpcSystem, twoparty, rpc_twoparty_capnp, Server};
 use futures::{Future, Stream};
 use native_tls::{Certificate, Pkcs12, TlsAcceptor, TlsConnector};
+use openssl::asn1::Asn1Time;
+use openssl::bn::{BigNum, MSB_MAYBE_ZERO};
+use openssl::hash::MessageDigest;
+use openssl::pkey::PKey;
+use openssl::rsa::Rsa;
+use openssl::x509::extension::SubjectAlternativeName;
+use openssl::x509::{X509Builder, X509NameBuilder};
 use tokio_core::{net, reactor};
 use tokio_io::AsyncRead;
 use tokio_tls::{TlsAcceptorExt, TlsConnectorExt};
 
 use errors::*;
 use microservice_capnp::microservice;
+
+const PKCS12_PASSWORD: &str = "";
 
 /// The main microservice structure
 pub struct Microservice {
@@ -54,28 +64,22 @@ impl Microservice {
         let parsed_address = address.to_socket_addrs()?.next().ok_or_else(
             || "Could not parse socket address.",
         )?;
-
-        // Process TLS settings
-        info!("Parsed socket address: {:}", parsed_address);
+        info!("Parsed socket address: {}", parsed_address);
 
         // Return service
         Ok(Microservice { socket_addr: parsed_address })
     }
 
     /// Runs the server
-    pub fn serve(&self, cert_filename: &str) -> Result<()> {
+    pub fn serve(&self, domains: &[&str]) -> Result<()> {
         info!("Creating server and binding socket.");
         let mut core = reactor::Core::new()?;
         let handle = core.handle();
         let socket = net::TcpListener::bind(&self.socket_addr, &handle)?;
 
-        // Prepare the vector
-        info!("Opening server certificate");
-        let mut bytes = vec![];
-        File::open(cert_filename)?.read_to_end(&mut bytes)?;
-
-        // Create the certificate
-        let cert = Pkcs12::from_der(&bytes, "")?;
+        // Generate TLS server certificate
+        let cert = Self::generate_cert(domains)?;
+        info!("Created new server ceritifacte");
 
         // Create the acceptor
         let tls_acceptor = TlsAcceptor::builder(cert)?.build()?;
@@ -155,5 +159,62 @@ impl Microservice {
 
         info!("Client creation successful.");
         Ok((client, core))
+    }
+
+    fn generate_cert(domains: &[&str]) -> Result<Pkcs12> {
+        // Create private key
+        let private_key = PKey::from_rsa(Rsa::generate(2048)?)?;
+
+        // Create cert builder
+        let mut cert_builder = X509Builder::new()?;
+        cert_builder.set_version(2)?;
+        cert_builder.set_pubkey(&private_key)?;
+
+        // Generate serial number
+        let mut serial = BigNum::new()?;
+        serial.rand(128, MSB_MAYBE_ZERO, false)?;
+        let asn1_serial = serial.to_asn1_integer()?;
+        cert_builder.set_serial_number(&asn1_serial)?;
+
+        // Set certificate subject
+        let mut subject_builder = X509NameBuilder::new()?;
+        let first_domain = domains.iter().nth(0).unwrap_or(&"");
+        info!("Setting server certificate common name: {}", first_domain);
+        subject_builder.append_entry_by_text("CN", first_domain)?;
+        let subject = subject_builder.build();
+        cert_builder.set_subject_name(&subject)?;
+        cert_builder.set_issuer_name(&subject)?;
+
+        // Set certificate validity
+        let now = Asn1Time::days_from_now(0)?;
+        let then = Asn1Time::days_from_now(365 * 10)?;
+        cert_builder.set_not_before(&now)?;
+        cert_builder.set_not_after(&then)?;
+
+        // Set subject alt names if needed
+        if domains.len() > 1 {
+            let mut san = SubjectAlternativeName::new();
+            for domain in domains.iter().skip(1) {
+                info!("Setting server subject alt name: {}", domain);
+                san.dns(domain);
+            }
+            let san_ext = san.build(&cert_builder.x509v3_context(None, None))?;
+            cert_builder.append_extension(san_ext)?;
+        }
+
+        // Sign the ceritifacte
+        cert_builder.sign(&private_key, MessageDigest::sha256())?;
+
+        // Create the Pkcs12 bundle
+        let openssl_pkcs12 = openssl::pkcs12::Pkcs12::builder().build(
+            PKCS12_PASSWORD,
+            "server",
+            &private_key,
+            &cert_builder.build(),
+        )?;
+        let der_bytes = openssl_pkcs12.to_der()?;
+        let native_tls_pkcs12 = Pkcs12::from_der(&der_bytes, PKCS12_PASSWORD)?;
+
+        Ok(native_tls_pkcs12)
     }
 }
